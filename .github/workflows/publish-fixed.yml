@@ -1,0 +1,75 @@
+name: 发布 Sublink v2.1 Fixed（Linux AMD64）
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "发布版本号，例如 v2.1-fixed.1"
+        required: true
+        default: "v2.1-fixed.1"
+        type: string
+
+permissions:
+  contents: write
+
+concurrency:
+  group: release-sublink
+  cancel-in-progress: false
+
+jobs:
+  release:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 30
+    steps:
+      - name: 检出源代码
+        uses: actions/checkout@v4
+
+      - name: 检查版本号
+        env:
+          VERSION: ${{ inputs.version }}
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          [[ "$VERSION" =~ ^v[0-9]+\.[0-9]+-fixed\.[0-9]+$ ]] || {
+            echo "版本号格式错误：$VERSION"; exit 1;
+          }
+          if gh release view "$VERSION" >/dev/null 2>&1; then
+            echo "Release 已存在：$VERSION（拒绝覆盖）"; exit 1
+          fi
+          if git ls-remote --exit-code --tags origin "refs/tags/$VERSION" >/dev/null 2>&1; then
+            echo "Tag 已存在：$VERSION（拒绝覆盖）"; exit 1
+          fi
+
+      - name: 安装 Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: "1.26.11"
+          cache: true
+
+      - name: 编译 Linux AMD64
+        env:
+          GOOS: linux
+          GOARCH: amd64
+          CGO_ENABLED: "0"
+        run: |
+          set -euo pipefail
+          go build -trimpath -ldflags="-s -w" -o sublink-linux-amd64 .
+          test -s sublink-linux-amd64
+          chmod 755 sublink-linux-amd64
+          file sublink-linux-amd64
+          sha256sum sublink-linux-amd64 > sublink-linux-amd64.sha256
+          cat sublink-linux-amd64.sha256
+
+      - name: 发布 GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VERSION: ${{ inputs.version }}
+        run: |
+          set -euo pipefail
+          gh release create "$VERSION" \
+            sublink-linux-amd64 \
+            sublink-linux-amd64.sha256 \
+            --target "$GITHUB_SHA" \
+            --title "Sublink v2.1 修复版 $VERSION" \
+            --notes-file RELEASE_NOTES.md \
+            --latest
