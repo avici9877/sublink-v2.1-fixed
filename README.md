@@ -1,3 +1,15 @@
+# Sublink v2.1 Fixed（修复维护版）
+
+> 基于原项目 Sublink v2.1 维护。此分支已经修复第三方 IP 归属地接口异常导致订阅获取卡住的问题，并默认仅监听本机。
+>
+> **中文更新说明与服务器部署注意事项：** [查看 FIX_NOTES.md](FIX_NOTES.md)
+>
+> **本次修改：** IP 归属地查询异步执行；单次查询超时 2 秒；订阅接口不再等待查询结束；默认监听地址由 `0.0.0.0` 改为 `127.0.0.1`。
+>
+> **重要：** 当前修复主要面向 Linux AMD64 + Nginx 反代部署；不要直接使用原项目安装脚本覆盖本修复版。部署前先备份 `db/` 和 `template/`，不要将数据库或订阅 Token 上传公开仓库。Release 安装包是否已发布，请以 [Releases](https://github.com/avici9877/sublink-v2.1-fixed/releases) 页面为准。
+
+---
+
 <div align="center">
 <img src="webs/src/assets/logo.png" width="150px" height="150px" />
 </div>
