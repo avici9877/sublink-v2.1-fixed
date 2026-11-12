@@ -1,40 +1,78 @@
-# Sublink v2.1 Fixed
+# Sublink v2.1 Fixed｜中文修复说明
 
-Based on xeefei/sublink v2.1 (fc90bed).
+本仓库基于 [xeefei/sublink](https://github.com/xeefei/sublink) **v2.1**（原始提交 `fc90bed`）修改，保留原项目许可证。此次修复针对订阅链接在第三方 IP 归属地查询服务异常时长时间卡住的问题，同时收紧默认监听范围。
 
-## Changes
+> 维护版本：`v2.1-fixed.1`（拟发布的 Release 标签；实际是否已发布请以 Releases 页面为准）
+>
+> 源码修改提交：`68ec1e9`（首次修复提交）
 
-1. IP geolocation lookup runs asynchronously.
-2. External IP lookup has a 2-second timeout.
-3. Subscription responses are no longer blocked by IP lookup failures.
-4. Sublink listens on 127.0.0.1 instead of 0.0.0.0.
+## 本次更新内容
 
-## Tested Environment
+### 1. 修复订阅请求被 IP 查询阻塞
 
-- Ubuntu 22.04 LTS
-- Linux AMD64
-- Go 1.26.11
-- Sublink v2.1
-- Nginx HTTPS reverse proxy
+- 文件：`middlewares/ip.go`
+- 原程序在订阅请求处理完之后，仍同步调用外部 IP 归属地接口 `whois.pconline.com.cn`。
+- 当该接口出现连接异常、协议错误或长时间不响应时，订阅 HTTP 响应也可能迟迟无法结束。
+- 修复后先从 Gin 请求上下文提取必要的订阅名称和访问者 IP，再在独立 goroutine 中查询，避免在异步任务中继续访问请求上下文。
 
-## Build
+### 2. 外部查询增加 2 秒超时
+
+- IP 查询使用带 `Timeout: 2 * time.Second` 的 HTTP 客户端。
+- 第三方服务错误或超时时，查询记录错误并结束，不再阻塞订阅内容返回。
+- 注意：外部查询失败时，IP 归属地/访问记录可能无法正常更新，但不会影响订阅生成。
+
+### 3. 默认只监听本机
+
+- 文件：`main.go`
+- 监听地址从 `0.0.0.0:<端口>` 调整为 `127.0.0.1:<端口>`。
+- 推荐通过 Nginx 等反向代理提供公网 HTTPS 入口，而不直接暴露 Sublink 的管理端口。
+- **兼容性提示：** 如已有容器、远程直连或其他反代部署依赖 `0.0.0.0` 监听，必须先调整架构或代码，不能无条件覆盖升级。
+
+## 实测验证
+
+在 **Ubuntu 22.04 / Linux AMD64 / Go 1.26.11** 环境进行了以下验证：
+
+| 验证项目 | 结果 |
+| --- | --- |
+| 修复版启动和首页访问 | 正常，HTTP 200 |
+| 修复版真实订阅接口 | HTTP 200，返回 1028 字节 |
+| 新旧版订阅输出 SHA256 | 相同（基于当时同一份订阅数据） |
+| 模拟外部 IP 查询延迟 10 秒 | 订阅约 12 毫秒返回，后台查询约 2 秒超时 |
+| 香港生产环境 HTTP 订阅 | 正常 |
+| 香港生产环境 Nginx HTTPS 订阅 | HTTP 200，约 136 毫秒，返回 1028 字节 |
+| Sublink 生产监听 | 已改为 `127.0.0.1:8000` |
+
+以上为该环境的测试结果，并非对所有发行版或架构的兼容性保证。
+
+## 构建方式
+
+需要 Go 1.22.0 或满足项目依赖要求的更高版本：
 
 ```bash
 go build -o sublink-linux-amd64 .
 ```
 
-## Deployment Notes
+Linux AMD64 的预编译程序如已发布，请到仓库的 **Releases** 页面下载，并校验 SHA256。不要把源码树中的临时可执行文件当作发布安装包。
 
-The application listens on 127.0.0.1 by default.
+## 现有服务器升级注意事项
 
-Use Nginx as a reverse proxy for external HTTPS access.
+1. 在升级前备份现有主程序、`db/`、`template/`、systemd 服务文件及 Nginx 配置。
+2. SQLite 数据库建议使用 SQLite 在线备份接口，避免运行中直接复制产生不一致数据。
+3. 确认反向代理指向 `http://127.0.0.1:8000`。
+4. 停止 Sublink、替换程序、重新启动，检查 `systemctl status sublink`、监听地址及订阅响应。
+5. 只有在公网 HTTPS 订阅和客户端均验证正常后，才视为升级完成；保留旧程序以备回滚。
 
-Preserve the existing db, template and configuration files when upgrading an existing installation.
+此修复版针对已有 **Sublink v2.1** 环境；不是自动迁移或初始化脚本，不保证能够直接覆盖不同数据库结构的旧版本。
 
-Do not upload production databases, tokens, passwords or server configuration to public repositories.
+## 安全说明
 
-## Original Project
+- **不要上传** `db/`、数据库、`config.yaml`、日志、订阅 Token、私人节点信息、GitHub Token 和服务器密钥。
+- 新部署时及时修改应用默认管理员凭据，并限制管理入口的公网访问。
+- 默认监听本机的构建不适合直接使用 `docker -p 8000:8000` 暴露服务，容器部署需专门调整。
+- 原仓库自带的安装脚本和 Docker 构建配置未必适用于该修复版本；请优先使用本仓库 Release 和本文说明。
 
-https://github.com/xeefei/sublink
+## 原项目与授权
 
-This fork preserves the original project license.
+- 原项目：[xeefei/sublink](https://github.com/xeefei/sublink)
+- 原版：v2.1
+- 本仓库保留原项目的 `LICENSE` 文件及相关版权声明。
