@@ -12,7 +12,7 @@ if [ "$(id -u)" -ne 0 ]; then
   exit 1
 fi
 
-for cmd in curl sed od tr systemctl sha256sum mktemp install; do
+for cmd in curl sed od tr systemctl sha256sum mktemp install cp sleep; do
   if ! command -v "$cmd" >/dev/null 2>&1; then
     echo "错误：缺少命令 $cmd，请先安装。" >&2
     exit 1
@@ -67,6 +67,14 @@ fi
   sha256sum -c sublink-linux-amd64.sha256
 ) || { echo "程序校验失败，已终止安装。" >&2; exit 1; }
 
+# 预先下载本仓库的服务管理菜单，避免再使用上游更新功能。
+if ! curl -fL --retry 3 --connect-timeout 15 \
+    -o "$TMP/menu.sh" \
+    "https://raw.githubusercontent.com/$REPO/main/menu.sh"; then
+  echo "无法下载本仓库的菜单，已安全终止安装。" >&2
+  exit 1
+fi
+
 # 防止把错误页面当成二进制文件执行。
 MAGIC="$(od -An -tx1 -N4 "$TMP/sublink" | tr -d ' \n')"
 if [ "$MAGIC" != "7f454c46" ]; then
@@ -77,6 +85,7 @@ fi
 umask 077
 mkdir -p "$INSTALL_DIR/db" "$INSTALL_DIR/template" "$INSTALL_DIR/logs"
 install -m 755 "$TMP/sublink" "$INSTALL_DIR/sublink"
+install -m 755 "$TMP/menu.sh" /usr/bin/sublink
 
 cat > "$SERVICE_FILE" <<'UNIT'
 [Unit]
@@ -106,5 +115,6 @@ fi
 
 echo "安装完成：Sublink $TAG"
 echo "服务状态：systemctl status sublink"
+echo "管理菜单：sudo sublink"
 echo "本程序只监听 127.0.0.1:8000。若需公网订阅，请自行配置 Nginx HTTPS 反向代理。"
 echo "首次使用请及时修改默认管理员凭据。"
