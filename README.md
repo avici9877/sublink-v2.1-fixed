@@ -9,6 +9,24 @@
 > **重要：** 当前修复主要面向 Linux AMD64 + Nginx 反代部署；不要直接使用原项目安装脚本覆盖本修复版。部署前先备份 `db/` 和 `template/`，不要将数据库或订阅 Token 上传公开仓库。Release 安装包是否已发布，请以 [Releases](https://github.com/avici9877/sublink-v2.1-fixed/releases) 页面为准。
 
 ---
+## 本修复版：发布与安装（请优先阅读）
+
+**发布新版本：** 打开 [GitHub Actions 的「发布 Sublink v2.1 Fixed（Linux AMD64）」](https://github.com/avici9877/sublink-v2.1-fixed/actions/workflows/publish-fixed.yml)，点击 **Run workflow**，使用版本号 `v2.1-fixed.1`。工作流会从当前代码编译 Linux AMD64，生成 SHA256 校验，并自动创建 GitHub Release。
+
+**全新安装（仅 Linux x86_64）：**
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/avici9877/sublink-v2.1-fixed/main/install.sh | sudo bash
+```
+
+该命令只下载**本仓库 Releases** 的二进制文件。只有 Release 发布成功后才可运行；安装前会校验 SHA256，并拒绝覆盖现有 Sublink。
+
+**管理菜单：** 安装后执行 `sudo sublink`。菜单仅操作本机服务，不会自动更新到原作者版本。
+
+**重要：** 修复版仅绑定 `127.0.0.1:8000`，要从公网访问必须配置 Nginx HTTPS 反向代理。已有安装请勿直接运行全新安装脚本；先备份数据库、模板、配置与程序。详细见 [中文修复说明](FIX_NOTES.md) 和 [发布说明](RELEASE_NOTES.md)。
+
+GitHub Actions 生成的程序是重新编译产物，不保证与原香港服务器已测试程序字节相同。请先在测试环境验证，再用于现有生产服务器。
+
 
 <div align="center">
 <img src="webs/src/assets/logo.png" width="150px" height="150px" />
