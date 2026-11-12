@@ -6,3 +6,28 @@ sublink_amd64
 sublink_arm64
 sublink.exe
 install.sh
+
+# Local builds and backups
+/sublink-fixed
+/sublink-fixed-local
+/middlewares/ip.go.bak
+
+# Runtime data - do not publish
+/db/
+/logs/
+*.db
+*.db-shm
+*.db-wal
+
+# Local build artifacts
+/sublink-fixed
+/sublink-fixed-local
+/middlewares/ip.go.bak
+
+# Runtime data and secrets
+/db/
+/logs/
+*.db
+*.db-shm
+*.db-wal
+.env

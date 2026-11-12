@@ -152,5 +152,5 @@ func Run(port int) {
 	routers.Templates(r)
 	routers.Version(r, version)
 	// 启动服务
-	r.Run(fmt.Sprintf("0.0.0.0:%d", port))
+	r.Run(fmt.Sprintf("127.0.0.1:%d", port))
 }

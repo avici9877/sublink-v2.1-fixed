@@ -15,11 +15,13 @@ import (
 
 func GetIp(c *gin.Context) {
 	c.Next()
-	func() {
-		subname, _ := c.Get("subname")
 
-		ip := c.ClientIP()
-		resp, err := http.Get(fmt.Sprintf("https://whois.pconline.com.cn/ipJson.jsp?ip=%s&json=true", ip))
+	subname, _ := c.Get("subname")
+	ip := c.ClientIP()
+
+	go func() {
+		client := &http.Client{Timeout: 2 * time.Second}
+		resp, err := client.Get(fmt.Sprintf("https://whois.pconline.com.cn/ipJson.jsp?ip=%s&json=true", ip))
 		if err != nil {
 			log.Println("获取IP信息失败:", err)
 			return
