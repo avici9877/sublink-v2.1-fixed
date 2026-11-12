@@ -20,8 +20,7 @@ for cmd in curl sed od tr systemctl; do
 done
 
 case "$(uname -m)" in
-  x86_64) ASSET="sublink_linux_amd64" ;;
-  aarch64) ASSET="sublink_linux_arm64" ;;
+  x86_64) ASSET="sublink-linux-amd64" ;;
   *) echo "不支持的架构：$(uname -m)" >&2; exit 1 ;;
 esac
 
