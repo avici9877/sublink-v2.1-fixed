@@ -12,7 +12,7 @@ if [ "$(id -u)" -ne 0 ]; then
   exit 1
 fi
 
-for cmd in curl sed od tr systemctl; do
+for cmd in curl sed od tr systemctl sha256sum mktemp install; do
   if ! command -v "$cmd" >/dev/null 2>&1; then
     echo "错误：缺少命令 $cmd，请先安装。" >&2
     exit 1
@@ -55,6 +55,17 @@ if ! curl -fL --retry 3 --connect-timeout 15 -o "$TMP/sublink" "$URL"; then
   echo "请检查 Release 是否包含名为 $ASSET 的附件。" >&2
   exit 1
 fi
+
+# 校验下载文件与同一 Release 中的 SHA256 是否一致。
+if ! curl -fL --retry 3 --connect-timeout 15   -o "$TMP/sublink-linux-amd64.sha256"   "https://github.com/$REPO/releases/download/$TAG/sublink-linux-amd64.sha256"; then
+  echo "缺少 SHA256 校验文件。为安全起见，拒绝安装。" >&2
+  exit 1
+fi
+(
+  cd "$TMP"
+  cp sublink sublink-linux-amd64
+  sha256sum -c sublink-linux-amd64.sha256
+) || { echo "程序校验失败，已终止安装。" >&2; exit 1; }
 
 # 防止把错误页面当成二进制文件执行。
 MAGIC="$(od -An -tx1 -N4 "$TMP/sublink" | tr -d ' \n')"
